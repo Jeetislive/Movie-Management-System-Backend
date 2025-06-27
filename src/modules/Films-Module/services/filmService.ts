@@ -12,58 +12,118 @@ filtersActor: string = "") => {
         const where: any = {};
 
         if (filtersCategory) {
-            where.film_category = {
-                some: {
-                    category: {
-                        name: {
-                            equals: filtersCategory
-                        }
+          if (filtersCategory.split(",").length > 1) {
+        where.film_category = {
+          some: {
+            category: {
+              name: {
+                in: filtersCategory.split(","),
+              },
+            },
+          },
+        };
+      } else {
+        where.film_category = {
+            some: {
+                category: {
+                    name: {
+                        equals: filtersCategory,
                     }
                 }
-            };
+            }
+        };
+          }
         }
 
         if (filtersLanguage) {
-            where.language_film_language_idTolanguage = {
-                name: {
-                    equals: filtersLanguage
-                }
-            };
+            if (filtersLanguage.split(",").length > 1) {
+                where.language_film_language_idTolanguage = {
+                    name: {
+                        in: filtersLanguage.split(",")
+                    }
+                };
+            } else {
+                where.language_film_language_idTolanguage = {
+                    name: {
+                        equals: filtersLanguage
+                    }
+                };
+            }
         }
 
         if (filtersRelease_year) {
-            where.release_year = parseInt(filtersRelease_year);
+            if (filtersRelease_year.split(",").length > 1) {
+                where.release_year = {
+                    in: filtersRelease_year.split(",").map(year => parseInt(year))
+                };
+            } else {
+                where.release_year = parseInt(filtersRelease_year);
+            }
         }
 
         if (filtersLength_type) {
-            where.length = {
-                [filtersLength_type]: filtersLength_value
-            };
+            if (filtersLength_value.toString().split(",").length > 1) {
+                where.length = {
+                    in: filtersLength_value.toString().split(",").map(length => parseInt(length))
+                };
+            } else {
+                where.length = {
+                    [filtersLength_type]: filtersLength_value
+                };
+            }
         }
 
         if (filtersActor) {
-            where.film_actor = {
-                some: {
-                    actor: {
-                        OR: [
-                            {
-                                first_name: {
-                                  contains: filtersActor.split(" ")[0],
-                                  // mode: "insensitive"
-                                }
-                            },
-                            {
-                                last_name: {
-                                  contains: filtersActor.split(" ")[1],
-                                  // mode: "insensitive"
-                                }
-                            }
-                        ]
+            if (filtersActor.split(",").length > 1) {
+        console.log("====>",filtersActor.split(","));
+                where.film_actor = {
+                    some: {
+                        actor: {
+                            OR: filtersActor.split(",").map(actor => ({
+                                
+                                AND: [
+                                    {
+                                        first_name: {
+                                            contains: actor.split(" ")[0],
+                                            
+                                            
+                                        }
+                                    },
+                                    {
+                                        last_name: {
+                                            contains: actor.split(" ")[1],
+                                            
+                                        }
+                                    }
+                                ]
+                            }))
+                        }
                     }
-                }
-            };
+                };
+            } else {
+                where.film_actor = {
+                    some: {
+                        actor: {
+                            AND: [
+                                {
+                                    first_name: {
+                                        startsWith: filtersActor.split(" ")[0],
+                                        
+                                    }
+                                },
+                                {
+                                    last_name: {
+                                        // contains: filtersActor.split(" ")[1],
+                                        startsWith: filtersActor.split(" ")[1],
+                                        
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                };
+            }
         }
-
         const films = await prisma.film.findMany({
             where,
             select: {
@@ -138,8 +198,8 @@ const getFilterDetails = async () => {
             categories,
             languages,
             actors,
-          years,
-          lengths,
+            years,
+            lengths,
         };
     }
         catch (error) {
